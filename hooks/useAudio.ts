@@ -14,6 +14,8 @@ export interface PlayOptions {
 
 export function useAudio() {
   const howls = useRef<{ [id: string]: Howl }>({});
+  // Preloaded howls keyed by src — used for instant playback on sync
+  const preloaded = useRef<{ [src: string]: Howl }>({});
   const [states, setStates] = useState<AudioState>({});
 
   const setState = useCallback((id: string, state: AudioState[string]) => {
@@ -38,10 +40,7 @@ export function useAudio() {
         src: [src],
         html5: true,
         ...(hasSprite ? { sprite: { clip: [opts!.startMs!, spriteDuration!] } } : {}),
-        onload: () => {
-          hasSprite ? howl.play('clip') : howl.play();
-          setState(id, 'playing');
-        },
+        onplay: () => setState(id, 'playing'),
         onend: () => setState(id, 'idle'),
         onstop: () => setState(id, 'idle'),
         onloaderror: () => setState(id, 'error'),
@@ -49,6 +48,10 @@ export function useAudio() {
       });
 
       howls.current[id] = howl;
+
+      // Call play() synchronously while still in the user-gesture stack.
+      // HTML5 audio queues it until the file is ready — iOS won't block it.
+      hasSprite ? howl.play('clip') : howl.play();
     },
     [setState]
   );
@@ -74,5 +77,16 @@ export function useAudio() {
     [states, play, stop]
   );
 
-  return { states, play, stop, stopAll, toggle };
+  // Pre-fetch a list of audio files so they're cached in the browser.
+  // Call this when joining a live session to minimize sync latency.
+  const preload = useCallback((files: string[]) => {
+    files.forEach((file) => {
+      const src = file.startsWith('blob:') || file.startsWith('data:') ? file : `/sounds/${file}`;
+      if (preloaded.current[src]) return;
+      const h = new Howl({ src: [src], html5: true, preload: true });
+      preloaded.current[src] = h;
+    });
+  }, []);
+
+  return { states, play, stop, stopAll, toggle, preload };
 }

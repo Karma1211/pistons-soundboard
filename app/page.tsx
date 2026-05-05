@@ -37,8 +37,15 @@ export default function SoundboardPage() {
   const [showSync, setShowSync] = useState(false);
   const [showLive, setShowLive] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
-  const { states, play, stop, toggle, stopAll } = useAudio();
+  const { states, play, stop, toggle, stopAll, preload } = useAudio();
   const syncLink = useRef('');
+
+  // Pre-fetch all sounds when joining a live session to minimize sync latency
+  useEffect(() => {
+    if (sessionId) {
+      preload(SOUNDS.map((s) => s.file));
+    }
+  }, [sessionId, preload]);
 
   // Load from localStorage + check ?s= URL param on mount
   useEffect(() => {
