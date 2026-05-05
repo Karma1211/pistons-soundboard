@@ -1,8 +1,6 @@
 [build]
-builder = "nixpacks"
-buildCommand = "rm -rf .next && npm run build && cp -r .next/static .next/standalone/.next/static && cp -r public .next/standalone/public"
+builder = "dockerfile"
 
 [deploy]
-startCommand = "HOSTNAME=0.0.0.0 node .next/standalone/server.js"
 restartPolicyType = "on_failure"
 restartPolicyMaxRetries = 3
