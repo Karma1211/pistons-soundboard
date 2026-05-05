@@ -1,23 +1,20 @@
-// Server-only: in-memory pub/sub for live sync SSE connections
+// Server-only: stores recent events per session for polling clients.
+// Events expire after 5 seconds — clients only need recent events.
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const store = new Map<string, Set<any>>();
-
-export function addListener(id: string, ctrl: ReadableStreamDefaultController<Uint8Array>) {
-  if (!store.has(id)) store.set(id, new Set());
-  store.get(id)!.add(ctrl);
+interface StoredEvent {
+  data: string;
+  ts: number;
 }
 
-export function removeListener(id: string, ctrl: ReadableStreamDefaultController<Uint8Array>) {
-  const set = store.get(id);
-  if (!set) return;
-  set.delete(ctrl);
-  if (set.size === 0) store.delete(id);
+const sessions = new Map<string, StoredEvent[]>();
+
+export function storeEvent(id: string, data: string) {
+  const now = Date.now();
+  const events = (sessions.get(id) ?? []).filter((e) => now - e.ts < 5000);
+  events.push({ data, ts: now });
+  sessions.set(id, events);
 }
 
-export function broadcast(id: string, data: string) {
-  const msg = new TextEncoder().encode(`data: ${data}\n\n`);
-  store.get(id)?.forEach((ctrl) => {
-    try { ctrl.enqueue(msg); } catch { /* client disconnected */ }
-  });
+export function getEventsSince(id: string, since: number): StoredEvent[] {
+  return (sessions.get(id) ?? []).filter((e) => e.ts > since);
 }

@@ -1,4 +1,4 @@
-import { broadcast } from '@/lib/sessionStore';
+import { storeEvent } from '@/lib/sessionStore';
 
 export const dynamic = 'force-dynamic';
 
@@ -9,6 +9,6 @@ export async function POST(
   const { id } = await params;
   const sessionId = id.toUpperCase().slice(0, 8);
   const body = await req.json();
-  broadcast(sessionId, JSON.stringify(body));
+  storeEvent(sessionId, JSON.stringify(body));
   return Response.json({ ok: true });
 }
