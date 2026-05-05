@@ -37,6 +37,7 @@ export default function SoundboardPage() {
   const [showSync, setShowSync] = useState(false);
   const [showLive, setShowLive] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [muteLocal, setMuteLocal] = useState(false);
   const { states, play, stop, toggle, stopAll, preload } = useAudio();
   const syncLink = useRef('');
 
@@ -158,15 +159,24 @@ export default function SoundboardPage() {
           state={states[sound.id] ?? 'idle'}
           onPress={() => {
             const isPlaying = states[sound.id] === 'playing';
-            toggle(sound.id, sound.file, { startMs: ds.startMs, endMs: ds.endMs });
             if (sessionId) {
-              broadcastEvent({
-                action: isPlaying ? 'stop' : 'play',
-                soundId: sound.id,
-                file: sound.file,
-                startMs: ds.startMs,
-                endMs: ds.endMs,
-              });
+              if (isPlaying) {
+                stop(sound.id);
+                broadcastEvent({ action: 'stop', soundId: sound.id });
+              } else {
+                broadcastEvent({
+                  action: 'play',
+                  soundId: sound.id,
+                  file: sound.file,
+                  startMs: ds.startMs,
+                  endMs: ds.endMs,
+                });
+                if (!muteLocal) {
+                  play(sound.id, sound.file, { startMs: ds.startMs, endMs: ds.endMs });
+                }
+              }
+            } else {
+              toggle(sound.id, sound.file, { startMs: ds.startMs, endMs: ds.endMs });
             }
           }}
         />
@@ -247,11 +257,11 @@ export default function SoundboardPage() {
             )}
             {sessionId ? (
               <button
-                onClick={() => setSessionId(null)}
+                onClick={() => { setSessionId(null); setMuteLocal(false); }}
                 className="flex items-center gap-1.5 bg-[#006BB6]/20 px-3 py-1.5 rounded-full text-[10px] font-black tracking-widest text-[#006BB6] uppercase"
               >
                 <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#006BB6] animate-pulse" />
-                {sessionId}
+                {muteLocal ? 'REMOTE' : sessionId}
               </button>
             ) : (
               <button
@@ -285,7 +295,7 @@ export default function SoundboardPage() {
         <div className="flex items-center gap-3 max-w-sm mx-auto">
           <button
             onClick={() => {
-              stopAll();
+              if (!muteLocal) stopAll();
               if (sessionId) broadcastEvent({ action: 'stopAll' });
             }}
             disabled={!anyPlaying}
@@ -326,7 +336,7 @@ export default function SoundboardPage() {
 
       {showLive && (
         <LiveSyncModal
-          onJoin={(code) => { setSessionId(code); }}
+          onJoin={(code, mute) => { setSessionId(code); setMuteLocal(mute); }}
           onClose={() => setShowLive(false)}
         />
       )}

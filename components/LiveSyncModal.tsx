@@ -3,7 +3,7 @@
 import { useState } from 'react';
 
 interface Props {
-  onJoin: (code: string) => void;
+  onJoin: (code: string, muteLocal: boolean) => void;
   onClose: () => void;
 }
 
@@ -15,17 +15,18 @@ export function LiveSyncModal({ onJoin, onClose }: Props) {
   const [generated, setGenerated] = useState('');
   const [joinVal, setJoinVal] = useState('');
   const [err, setErr] = useState(false);
+  const [muteLocal, setMuteLocal] = useState(false);
 
   function host() {
     const code = randomCode();
     setGenerated(code);
-    onJoin(code);
+    onJoin(code, muteLocal);
   }
 
   function join() {
     const code = joinVal.trim().toUpperCase();
     if (code.length < 4) { setErr(true); return; }
-    onJoin(code);
+    onJoin(code, muteLocal);
     onClose();
   }
 
@@ -38,17 +39,45 @@ export function LiveSyncModal({ onJoin, onClose }: Props) {
         </div>
 
         <div className="px-5 py-5 space-y-6">
+          {/* Remote-only toggle */}
+          <button
+            onClick={() => setMuteLocal((v) => !v)}
+            className={[
+              'w-full flex items-center justify-between px-4 py-3 rounded-xl border transition-all',
+              muteLocal
+                ? 'bg-[#006BB6]/20 border-[#006BB6]/50 text-[#006BB6]'
+                : 'bg-[#0a0a0a] border-[#2a2a2a] text-[#555]',
+            ].join(' ')}
+          >
+            <div className="text-left">
+              <p className="text-[11px] font-black tracking-widest uppercase">
+                {muteLocal ? 'REMOTE ONLY — ON' : 'REMOTE ONLY — OFF'}
+              </p>
+              <p className="text-[10px] mt-0.5 opacity-70">
+                {muteLocal
+                  ? 'This device sends only — no local audio'
+                  : 'This device plays + broadcasts'}
+              </p>
+            </div>
+            <div className={[
+              'w-5 h-5 rounded-full border-2 flex items-center justify-center',
+              muteLocal ? 'border-[#006BB6] bg-[#006BB6]' : 'border-[#444]',
+            ].join(' ')}>
+              {muteLocal && <span className="text-white text-[10px]">✓</span>}
+            </div>
+          </button>
+
           {/* Host */}
           <div className="space-y-3">
             <p className="text-[10px] font-black tracking-widest text-[#666] uppercase">Start a session</p>
             <p className="text-[11px] text-[#555] leading-relaxed">
-              Generate a code on this device, then join with the same code on your other device. Sounds you play will fire on both simultaneously.
+              Generate a code on this device, then join with the same code on the MacBook.
             </p>
             {generated ? (
               <div className="bg-[#0a0a0a] border border-[#2a2a2a] rounded-xl px-4 py-4 text-center">
                 <p className="text-[10px] text-[#555] tracking-widest uppercase mb-1">Session Code</p>
                 <p className="text-3xl font-black tracking-[0.3em] text-white">{generated}</p>
-                <p className="text-[10px] text-[#444] mt-2">Enter this code on your other device</p>
+                <p className="text-[10px] text-[#444] mt-2">Enter this on your MacBook</p>
               </div>
             ) : (
               <button
