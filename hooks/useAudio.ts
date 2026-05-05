@@ -7,6 +7,11 @@ interface AudioState {
   [id: string]: 'idle' | 'loading' | 'playing' | 'error';
 }
 
+export interface PlayOptions {
+  startMs?: number;
+  endMs?: number;
+}
+
 export function useAudio() {
   const howls = useRef<{ [id: string]: Howl }>({});
   const [states, setStates] = useState<AudioState>({});
@@ -16,8 +21,7 @@ export function useAudio() {
   }, []);
 
   const play = useCallback(
-    (id: string, file: string) => {
-      // Stop currently playing instance of this sound
+    (id: string, file: string, opts?: PlayOptions) => {
       if (howls.current[id]) {
         howls.current[id].stop();
         howls.current[id].unload();
@@ -26,11 +30,16 @@ export function useAudio() {
 
       setState(id, 'loading');
 
+      const src = file.startsWith('blob:') || file.startsWith('data:') ? file : `/sounds/${file}`;
+      const hasSprite = opts?.startMs !== undefined && opts?.endMs !== undefined;
+      const spriteDuration = hasSprite ? opts!.endMs! - opts!.startMs! : undefined;
+
       const howl = new Howl({
-        src: [`/sounds/${file}`],
+        src: [src],
         html5: true,
+        ...(hasSprite ? { sprite: { clip: [opts!.startMs!, spriteDuration!] } } : {}),
         onload: () => {
-          howl.play();
+          hasSprite ? howl.play('clip') : howl.play();
           setState(id, 'playing');
         },
         onend: () => setState(id, 'idle'),
@@ -46,9 +55,7 @@ export function useAudio() {
 
   const stop = useCallback(
     (id: string) => {
-      if (howls.current[id]) {
-        howls.current[id].stop();
-      }
+      if (howls.current[id]) howls.current[id].stop();
       setState(id, 'idle');
     },
     [setState]
@@ -60,12 +67,9 @@ export function useAudio() {
   }, []);
 
   const toggle = useCallback(
-    (id: string, file: string) => {
-      if (states[id] === 'playing') {
-        stop(id);
-      } else {
-        play(id, file);
-      }
+    (id: string, file: string, opts?: PlayOptions) => {
+      if (states[id] === 'playing') stop(id);
+      else play(id, file, opts);
     },
     [states, play, stop]
   );
