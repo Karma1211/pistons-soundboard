@@ -42,12 +42,10 @@ export default function SoundboardPage() {
   const { states, play, stop, toggle, stopAll, preload } = useAudio();
   const syncLink = useRef('');
 
-  // Pre-fetch all sounds when joining a live session to minimize sync latency
+  // Pre-fetch all sounds on app load so they're cached before any sync event fires
   useEffect(() => {
-    if (sessionId) {
-      preload(SOUNDS.map((s) => s.file));
-    }
-  }, [sessionId, preload]);
+    preload(SOUNDS.map((s) => s.file));
+  }, [preload]);
 
   // Load from localStorage + check ?s= URL param on mount
   useEffect(() => {
