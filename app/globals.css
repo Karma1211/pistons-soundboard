@@ -36,6 +36,8 @@ body {
   font-family: 'Arial Black', 'Arial', sans-serif;
   overscroll-behavior: none;
   -webkit-overflow-scrolling: touch;
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
 }
 
 @keyframes pulse-ring {
