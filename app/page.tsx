@@ -11,6 +11,7 @@ import { LiveSyncModal } from '@/components/LiveSyncModal';
 import { useAudio } from '@/hooks/useAudio';
 import { useLiveSync } from '@/hooks/useLiveSync';
 import { encodeSync, decodeSync } from '@/lib/syncUrl';
+import { SYNC_DELAY_MS } from '@/hooks/useLiveSync';
 import type { SoundOverride, CustomSound } from '@/lib/types';
 
 interface EditTarget {
@@ -84,11 +85,14 @@ export default function SoundboardPage() {
   }, [favorites]);
 
   // Live sync — remote events trigger audio directly (no re-broadcast)
-  const onRemoteEvent = useCallback((e: { action: string; soundId?: string; file?: string; startMs?: number; endMs?: number }) => {
+  const onRemoteEvent = useCallback((e: { action: string; soundId?: string; file?: string; startMs?: number; endMs?: number; playAt?: number }) => {
     if (e.action === 'stopAll') { stopAll(); return; }
     if (e.action === 'stop' && e.soundId) { stop(e.soundId); return; }
     if (e.action === 'play' && e.soundId && e.file) {
-      play(e.soundId, e.file, { startMs: e.startMs, endMs: e.endMs });
+      // Calculate how many ms remain until the scheduled fire time.
+      // If the event arrived late (playAt already passed), play immediately.
+      const playAfterMs = e.playAt ? Math.max(0, e.playAt - Date.now()) : 0;
+      play(e.soundId, e.file, { startMs: e.startMs, endMs: e.endMs, playAfterMs });
     }
   }, [play, stop, stopAll]);
 
@@ -172,7 +176,9 @@ export default function SoundboardPage() {
                   endMs: ds.endMs,
                 });
                 if (!muteLocal) {
-                  play(sound.id, sound.file, { startMs: ds.startMs, endMs: ds.endMs });
+                  // Delay local play by the same window so sender fires at the same
+                  // wall-clock moment as the receiver.
+                  play(sound.id, sound.file, { startMs: ds.startMs, endMs: ds.endMs, playAfterMs: SYNC_DELAY_MS });
                 }
               }
             } else {
