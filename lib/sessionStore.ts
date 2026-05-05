@@ -1,20 +1,14 @@
-// Server-only in-memory session store for live sync SSE
-type Ctrl = ReadableStreamDefaultController<Uint8Array>;
+// Server-only: in-memory pub/sub for live sync SSE connections
 
-declare global {
-  // eslint-disable-next-line no-var
-  var _pistonsSessions: Map<string, Set<Ctrl>> | undefined;
-}
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const store = new Map<string, Set<any>>();
 
-const store: Map<string, Set<Ctrl>> =
-  globalThis._pistonsSessions ?? (globalThis._pistonsSessions = new Map());
-
-export function addListener(id: string, ctrl: Ctrl) {
+export function addListener(id: string, ctrl: ReadableStreamDefaultController<Uint8Array>) {
   if (!store.has(id)) store.set(id, new Set());
   store.get(id)!.add(ctrl);
 }
 
-export function removeListener(id: string, ctrl: Ctrl) {
+export function removeListener(id: string, ctrl: ReadableStreamDefaultController<Uint8Array>) {
   const set = store.get(id);
   if (!set) return;
   set.delete(ctrl);
