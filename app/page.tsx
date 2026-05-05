@@ -1,65 +1,92 @@
-import Image from "next/image";
+'use client';
 
-export default function Home() {
+import { useState } from 'react';
+import { SOUNDS, CATEGORIES, Category } from '@/lib/sounds';
+import { SoundButton } from '@/components/SoundButton';
+import { CategoryTabs } from '@/components/CategoryTabs';
+import { useAudio } from '@/hooks/useAudio';
+
+export default function SoundboardPage() {
+  const [activeCategory, setActiveCategory] = useState<Category>('hype');
+  const { states, toggle, stopAll } = useAudio();
+
+  const filtered = SOUNDS.filter((s) => s.category === activeCategory);
+  const anyPlaying = Object.values(states).some((s) => s === 'playing' || s === 'loading');
+  const playingCount = Object.values(states).filter((s) => s === 'playing').length;
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <div className="flex flex-col h-dvh bg-[#0a0a0a] overflow-hidden">
+      {/* Header */}
+      <header className="flex-shrink-0 px-4 pt-4">
+        <div className="flex items-center justify-between pb-4 border-b border-[#1e1e1e]">
+          <div className="flex items-center gap-2.5">
+            {/* Color bars — Pistons stripe */}
+            <div className="flex gap-0.5 items-end">
+              <span className="block w-2 h-8 bg-[#C8102E] rounded-sm" />
+              <span className="block w-2 h-6 bg-[#006BB6] rounded-sm" />
+              <span className="block w-2 h-8 bg-[#C8102E] rounded-sm" />
+            </div>
+            <div>
+              <h1 className="text-xl font-black tracking-[0.2em] uppercase leading-none text-white">
+                PISTONS
+              </h1>
+              <p className="text-[9px] tracking-[0.25em] text-[#666] uppercase leading-none mt-1">
+                SOUNDBOARD · CYBERTRUCK EDITION
+              </p>
+            </div>
+          </div>
+
+          {anyPlaying && (
+            <div className="flex items-center gap-1.5 bg-[#C8102E]/20 px-3 py-1.5 rounded-full">
+              <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#C8102E] animate-pulse" />
+              <span className="text-[10px] text-[#C8102E] font-black tracking-widest">LIVE</span>
+            </div>
+          )}
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
+      </header>
+
+      {/* Category tabs */}
+      <div className="flex-shrink-0 px-4 py-3 border-b border-[#1e1e1e]">
+        <CategoryTabs active={activeCategory} onChange={setActiveCategory} />
+      </div>
+
+      {/* Sound grid */}
+      <main className="flex-1 overflow-y-auto px-4 py-4">
+        <div className="grid grid-cols-2 gap-3 pb-24">
+          {filtered.map((sound) => (
+            <SoundButton
+              key={sound.id}
+              sound={sound}
+              state={states[sound.id] ?? 'idle'}
+              onPress={() => toggle(sound.id, sound.file)}
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+          ))}
         </div>
       </main>
+
+      {/* Fixed bottom STOP bar */}
+      <div className="fixed bottom-0 left-0 right-0 bg-[#0a0a0a]/95 backdrop-blur border-t border-[#1e1e1e] px-4 py-3">
+        <div className="flex items-center gap-3 max-w-sm mx-auto">
+          <button
+            onClick={stopAll}
+            disabled={!anyPlaying}
+            className={[
+              'flex-1 py-4 rounded-xl font-black tracking-widest text-sm uppercase transition-all duration-150',
+              anyPlaying
+                ? 'bg-[#C8102E] text-white shadow-[0_4px_24px_rgba(200,16,46,0.5)] active:scale-95'
+                : 'bg-[#1e1e1e] text-[#444] cursor-not-allowed',
+            ].join(' ')}
+          >
+            ■ STOP ALL
+          </button>
+
+          <div className="w-16 text-center">
+            <p className="text-[10px] text-[#555] tracking-widest uppercase font-black">
+              {playingCount > 0 ? `${playingCount} ON` : 'READY'}
+            </p>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
